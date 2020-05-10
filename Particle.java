@@ -1,18 +1,26 @@
+package fysiktest;
+
 import java.awt.Graphics2D;
 import java.awt.Color;
 
 public class Particle {
 
-	private double vx; 					//m/s
-	private double vy; 					//m/s
-	private double t = 0.01; 				//s
-	private double r;								//m
-	private double m;								//kg
-	private double a;								//m^2
-	private double dAir = 1.2041; 	//kg/m^3
+	private final int dimX = PhysicsCanvas.dimX;
+	private final int dimY = PhysicsCanvas.dimY - 100;
+	private final int holeXMin = dimX - 200;
+	private final int holeXMax = dimY - 150;
+	private final int holeY = dimY + 50;
+
+	private double vx; // m/s
+	private double vy; // m/s
+	private double t = 0.1; // s
+	private double r; // m
+	private double m; // kg
+	private double a; // m^2
+	private double dAir = 1.2041; // kg/m^3
 	private double drag = 0.47;
-	private double fNetX = 10;
-	private double fNetY = 10;
+	private double fNetX = 100;
+	private double fNetY = -10;
 	private Color color;
 
 	public double f = 0.55;
@@ -24,7 +32,7 @@ public class Particle {
 		return x;
 	}
 
-	public void setX(double x){
+	public void setX(double x) {
 		this.x = x;
 	}
 
@@ -34,7 +42,7 @@ public class Particle {
 		return y;
 	}
 
-	public void setY(double y){
+	public void setY(double y) {
 		this.y = y;
 	}
 
@@ -44,94 +52,120 @@ public class Particle {
 		this.r = r;
 		this.m = m;
 		this.color = color;
-		fNetY -= m*g;
-		vx = fNetX/m*t;
-		vy = fNetY/m*t;
-		a = r*r*Math.PI;
+		fNetY += m * g;
+		vx = (fNetX / m) * t;
+		vy = (fNetY / m) * t;
+		a = r * r * Math.PI;
 	}
 
 	public void update() {
-		//fx
-		double airFX = airResistance(vx);
-		//System.out.println(airFX);
+		// fx
+		// double airFX = airResistance(vx);
+		double airFX = 0;
 		double fNetXNew;
-		if(fNetX > 0){
+		if (fNetX > 0) {
 			fNetXNew = fNetX - airFX;
-		}else{
+		} else {
 			fNetXNew = fNetX + airFX;
 		}
-		double vxNew = (fNetXNew/m)*t;
 
-		//fy
-		double airFY = airResistance(vy);
-		double fNetYNew = fNetY - airFY;
-		double vyNew = vy + (fNetYNew/m)*t;
+		double vxNew = (fNetXNew / m) * t;
 
-		x += vx*t;
-		y += vy*t;
+		// fy
+		// double airFY = airResistance(vy);
+		double airFY = 0;
+		double fNetYNew;
+		if (fNetY > 0) {
+			fNetYNew = fNetY - airFY - m * g;
+		} else {
+			fNetYNew = fNetY + airFY + m * g;
+		}
+		double vyNew = vy + (fNetYNew / m) * t;
+
+		double fN = -m * g;
+
+		x += vx * t;
+		y += vy * t;
 		vx = vxNew;
 		vy = vyNew;
 		fNetX = fNetXNew;
 		fNetY = fNetYNew;
-		//vy += g*t;
-		double fN = -m*g;
-		checkCollisions(fN);
+		checkCollisions();
+		// System.out.println(fNetX + " " + fNetY);
+		// vy += g*t;
 	}
 
-
-
-	public void checkCollisions(double fN) {
-		//x
-		if(x - r < 0){
+	public void checkCollisions() {
+		// x
+		if (x - r < 0) {
 			x = r;
-			fNetX = -fNetX - (fN * f);
-		}else if(x + r > 800){
-			x = 800 - r;
-			fNetX = -fNetX + (fN * f);
-		}else if((x >= 600 && x <= 650) && y > 400 && x - r < 600){
-			x = 600 + r;
-			fNetX = -fNetX - (fN * f);
-		}else if((x >= 600 && x <= 650) && y > 400 && x + r > 650){
-			x = 650 - r;
-			fNetX = -fNetX + (fN * f);
+			fNetX = -fNetX * f;
+		} else if (x + r > dimX) {
+			x = dimX - r;
+			fNetX = -fNetX * f;
+		} else if ((x >= holeXMin && x <= holeXMax) && y > dimY && x - r < holeXMin) {
+			x = holeXMin + r;
+			fNetX = -fNetX * f;
+		} else if ((x >= holeXMin && x <= holeXMax) && y > dimY && x + r > holeXMax) {
+			x = holeXMax - r;
+			fNetX = -fNetX * f;
 		}
-		//y
-		if(y - r < 0){
+		// y
+		if (y - r <= 0) {
 			y = r;
-			fNetY += (fN * f);
-		}else if((x < 600 || x > 650) && y + r > 400){
+			fNetY = -fNetY;
+
+			if (fNetY > 0) {
+				fNetY = fNetY * f;
+			} else if (fNetY < 0) {
+				fNetY = fNetY * f;
+			}
+
+		} else if ((x < holeXMin || x > holeXMax) && y + r > dimY) {
 			double oldY = y;
-			y = 400 - r;
+			y = dimY - r;
 			vy = -(vy * f);
 			vx = 0.98 * vx;
-			if(Math.abs(vx) < 0.1) {
-				vx = 0;
+
+			if (fNetX > 0) {
+				fNetX = fNetX * f;
+			} else if (fNetX < 0) {
+				fNetX = fNetX * f;
+			}
+
+			if (Math.abs(vx) < 0.1) {
+				fNetX = 0;
 			}
 			if (Math.abs(y - oldY) < 0.1) {
-				vy = 0;
+				fNetY = 0;
 			}
-		}else if((x >= 600 && x <= 650) && y + r > 450){
+		} else if ((x >= holeXMin && x <= holeXMax) && y + r > holeY) {
 			double oldY = y;
 			y = 450 - r;
 			vy = -(vy * f);
 			vx = 0.98 * vx;
-			if(Math.abs(vx) < 0.1) {
-				vx = 0;
+
+			if (fNetX > 0) {
+				fNetX = fNetX * f;
+			} else if (fNetX < 0) {
+				fNetX = fNetX * f;
+			}
+
+			if (Math.abs(fNetX) < 0.1) {
+				fNetX = 0;
 			}
 			if (Math.abs(y - oldY) < 0.1) {
-				vy = 0;
+				fNetY = 0;
 			}
 		}
 	}
 
-	public double airResistance(double v){
-		double ret = 0.5*drag*a*dAir*v*v;
-		System.out.println(ret);
-		return ret;
+	public double airResistance(double v) {
+		return 0.5 * drag * a * dAir * v * v;
 	}
 
 	public void render(Graphics2D g) {
 		g.setColor(color);
-		g.fillOval((int) Math.round(x - r*500), (int) Math.round(y - r*500), (int) Math.round(2 * r*500), (int) Math.round(2 * r*500));
+		g.fillOval((int) Math.round(x - r), (int) Math.round(y - r), (int) Math.round(2 * r), (int) Math.round(2 * r));
 	}
 }
