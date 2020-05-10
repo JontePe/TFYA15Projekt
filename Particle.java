@@ -8,19 +8,19 @@ public class Particle {
 	private final int dimX = PhysicsCanvas.dimX;
 	private final int dimY = PhysicsCanvas.dimY - 100;
 	private final int holeXMin = dimX - 200;
-	private final int holeXMax = dimY - 150;
+	private final int holeXMax = dimX - 150;
 	private final int holeY = dimY + 50;
 
 	private double vx; // m/s
 	private double vy; // m/s
-	private double t = 0.1; // s
+	private double t = 0.05; // s
 	private double r; // m
 	private double m; // kg
 	private double a; // m^2
 	private double dAir = 1.2041; // kg/m^3
 	private double drag = 0.47;
-	private double fNetX = 100;
-	private double fNetY = -10;
+	private double fNetX = 300;
+	private double fNetY = 10;
 	private Color color;
 
 	public double f = 0.55;
@@ -76,7 +76,7 @@ public class Particle {
 		double airFY = 0;
 		double fNetYNew;
 		if (fNetY > 0) {
-			fNetYNew = fNetY - airFY - m * g;
+			fNetYNew = fNetY - airFY + m * g;
 		} else {
 			fNetYNew = fNetY + airFY + m * g;
 		}
@@ -90,18 +90,21 @@ public class Particle {
 		vy = vyNew;
 		fNetX = fNetXNew;
 		fNetY = fNetYNew;
-		checkCollisions();
-		// System.out.println(fNetX + " " + fNetY);
-		// vy += g*t;
+		checkCollisions(fN);
+
 	}
 
-	public void checkCollisions() {
+	public void checkCollisions(double fN) {
+		
+		System.out.println(vx);
 		// x
 		if (x - r < 0) {
 			x = r;
+			vx = -(vx * f);
 			fNetX = -fNetX * f;
 		} else if (x + r > dimX) {
 			x = dimX - r;
+			vx = -(vx * f);
 			fNetX = -fNetX * f;
 		} else if ((x >= holeXMin && x <= holeXMax) && y > dimY && x - r < holeXMin) {
 			x = holeXMin + r;
@@ -113,37 +116,37 @@ public class Particle {
 		// y
 		if (y - r <= 0) {
 			y = r;
-			fNetY = -fNetY;
+			if (fNetY > 0) {
+				fNetY = fNetY - (fN * f);
+			} else if (fNetY < 0) {
+				fNetY = fNetY + (fN * f);
+			}
 
+		} else if ((x < holeXMin || x > holeXMax) && y + r > dimY) {
+			double oldY = y;
+			y = dimY - r;			
+			vy = -(vy * f);
+			
 			if (fNetY > 0) {
 				fNetY = fNetY * f;
 			} else if (fNetY < 0) {
 				fNetY = fNetY * f;
 			}
 
-		} else if ((x < holeXMin || x > holeXMax) && y + r > dimY) {
-			double oldY = y;
-			y = dimY - r;
-			vy = -(vy * f);
-			vx = 0.98 * vx;
-
-			if (fNetX > 0) {
-				fNetX = fNetX * f;
-			} else if (fNetX < 0) {
-				fNetX = fNetX * f;
-			}
-
 			if (Math.abs(vx) < 0.1) {
 				fNetX = 0;
 			}
-			if (Math.abs(y - oldY) < 0.1) {
+			if (Math.abs(y - oldY) <= 1) {
 				fNetY = 0;
+				vy = 0;
 			}
-		} else if ((x >= holeXMin && x <= holeXMax) && y + r > holeY) {
+		} else if ((x >= holeXMin && x <= holeXMax) && y  > holeY) {
+			
 			double oldY = y;
-			y = 450 - r;
+			y = holeXMin - r;
 			vy = -(vy * f);
-			vx = 0.98 * vx;
+			vx = 0.9 * vx;
+			
 
 			if (fNetX > 0) {
 				fNetX = fNetX * f;
@@ -154,8 +157,9 @@ public class Particle {
 			if (Math.abs(fNetX) < 0.1) {
 				fNetX = 0;
 			}
-			if (Math.abs(y - oldY) < 0.1) {
+			if (Math.abs(y - oldY) < 1) {
 				fNetY = 0;
+				vy = 0;
 			}
 		}
 	}
