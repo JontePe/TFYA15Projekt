@@ -3,169 +3,183 @@ import java.awt.Color;
 
 public class Particle {
 
+  //Fönster-konstanter
 	private final int dimX = PhysicsCanvas.dimX;
 	private final int dimY = PhysicsCanvas.dimY - 100;
 	private final int holeXMin = dimX - 200;
-	private final int holeXMax = dimY - 150;
+	private final int holeXMax = dimX - 150;
 	private final int holeY = dimY + 50;
 
+  //Fönster-variabler
+  private Color color;
 
-	private double vx; 					//m/s
-	private double vy; 					//m/s
-	private double t = 0.01; 				//s
-	private double r;								//m
-	private double m;								//kg
-	private double a;								//m^2
-	private double dAir = 1.2041; 	//kg/m^3
-	private double drag = 0.47;
-	private double fNetX = 100;
-	private double fNetY = -10;
-	private Color color;
+  //Fysik-konstanter
+  private final double muX = 0.9;        //Friktionskoefficient                                Saknar dimension (x-led)
+  private final double muY = 0.6;        //Friktionskoefficient                                Saknar dimension (y-led)
+  private final double drag = 0.47;      //Luftens dragskoefficient                            Saknar dimension
+	private final double g = 9.82;         //Tyngdacceleration                                   m/s^2 (y-led)
+  private final double dt = 0.1; 				 //Tidsintervall                                       s
+  private final double vG = g*dt;        //Gravitationens hastighetsvektor                     m/s (y-led)
+  private final double rhoAir = 1.2041;  //Luftens densitet                                    kg/m^3
 
-	public double f = 0.55;
-	public double g = 9.82;
+  //Fysik-variabler
+	private double r;								       //Radie                                               m
+	private double m;								       //Massa                                               kg
+	private double A;								       //Tvärsnittsarea                                      m^2
+	private double fHitX = 200;            //Slagets kraft                                       N (x-led)
+	private double fHitY = -300;           //Slagets kraft                                       N (Y-led)
+  private double vxOld;                  //Nettohastighetsvektorn i det förra tidsintervallet  m/s (x-led)
+  private double vyOld;                  //Nettohastighetsvektorn i det förra tidsintervallet  m/s (y-led)
+	private double x;                      //Position                                            m (x-led)
+  private double y;                      //Position                                            m (y-led)
 
-	private double x;
-
-	public double getX() {
+  /*
+  Getter & setter för x
+  */
+	public double getX(){
 		return x;
 	}
-
 	public void setX(double x){
 		this.x = x;
 	}
 
-	private double y;
-
-	public double getY() {
+  /*
+  Getter & setter för y
+  */
+	public double getY(){
 		return y;
 	}
-
 	public void setY(double y){
 		this.y = y;
 	}
 
-	public Particle(double x, double y, double r, double m, Color color) {
+  /*
+  Getter & setter för vxOld
+  */
+	public double getVXOld(){
+		return vxOld;
+	}
+	public void setVXOld(double vxOld){
+		this.vxOld = vxOld;
+	}
+
+  /*
+  Getter & setter för vyOld
+  */
+	public double getVYOld(){
+		return vyOld;
+	}
+	public void setVYOld(double vyOld){
+		this.vyOld = vyOld;
+	}
+
+  /*
+  Konstruktör
+  */
+	public Particle(double x, double y, double r, double m, Color color){
 		this.x = x;
 		this.y = y;
 		this.r = r;
 		this.m = m;
+    vxOld = fHitX/m*dt;
+    vyOld = fHitY/m*dt;
 		this.color = color;
-		fNetY += m*g;
-		vx = (fNetX/m)*t;
-		vy = (fNetY/m)*t;
-		a = r*r*Math.PI;
+		A = r*r*Math.PI;
+    this.r = r*400;
 	}
 
-	public void update() {
-		//fx
-		//double airFX = airResistance(vx);
-		double airFX = 0;
-		double fNetXNew;
-		if(fNetX > 0){
-			fNetXNew = fNetX - airFX;
-		}else{
-			fNetXNew = fNetX + airFX;
-		}
-		double vxNew = (fNetXNew/m)*t;
+  /*
+  Uppdaterar bollens position
+  */
+	public void update(){
+    //X-LED
+    double dvx = airResistance(vxOld);
+    System.out.println("dvx = " + dvx);
+    double vxNew = vxOld + dvx;
 
-		//fy
-		//double airFY = airResistance(vy);
-		double airFY = 0;
-		double fNetYNew;
-		if(fNetY > 0){
-			fNetYNew = fNetX - airFX + m*g;
-		}else{
-			fNetYNew = fNetX + airFX + m*g;
-		}
-		double vyNew = vy + (fNetYNew/m)*t;
+    //Y-LED
+    double dvy = vG + airResistance(vyOld);
+    System.out.println("dvy = " + dvy);
+    double vyNew = vyOld + dvy;
 
-		double fN = -m*g;
-
-		x += vx*t;
-		y += vy*t;
-		vx = vxNew;
-		vy = vyNew;
-		fNetX = fNetXNew;
-		fNetY = fNetYNew;
-		checkCollisions(fN);
-		System.out.println(fNetX + "    " + fNetY);
-		//vy += g*t;
+    //UPPDATERING
+    x += vxNew*dt;
+		y += vyNew*dt;
+    vyOld = vyNew;
+    vxOld = vxNew;
+    bounceCheck();
 	}
 
+  /*
+  Beräknar luftmotståndets hastighetsvektor i v:s led
+  */
+  private double airResistance(double v){
+    double vAir = ((0.5*drag*A*rhoAir*v*v)/m)*dt;
+    if(v > 0)
+		  return vAir*(-1);
+    else return vAir;
+	}
 
+  /*
+  Kollar om bollen ska studsa
+  */
+	private void bounceCheck(){
+		//X-LED
+		if(x - r < 0)                                                               //Studs i vänstra väggen
+      bounceX(r);
+		else if(x + r > dimX)                                                       //Studs i högra väggen
+      bounceX(dimX - r);
+		else if((x >= holeXMin && x <= holeXMax) && y > dimY && x - r < holeXMin)   //Studs i hålets vänstra vägg
+      bounceX(holeXMin + r);
+		else if((x >= holeXMin && x <= holeXMax) && y > dimY && x + r > holeXMax)   //Studs i hålets högra vägg
+      bounceX(holeXMax - r);
 
-	public void checkCollisions(double fN) {
-		//x
-		if(x - r < 0){
-			x = r;
-			fNetX = -fNetX - (fN * f);
-		}else if(x + r > dimX){
-			x = dimX - r;
-			fNetX = -fNetX + (fN * f);
-		}else if((x >= holeXMin && x <= holeXMax) && y > dimY && x - r < holeXMin){
-			x = holeXMin + r;
-			fNetX = -fNetX - (fN * f);
-		}else if((x >= holeXMin && x <= holeXMax) && y > dimY && x + r > holeXMax){
-			x = holeXMax - r;
-			fNetX = -fNetX + (fN * f);
-		}
-		//y
-		if(y - r <= 0){
-			y = r;
-			fNetY = -fNetY + (fN * f);
-
-			if(fNetX > 0){
-				fNetX = fNetX - (fN * f);
-			}else if(fNetX < 0){
-				fNetX = fNetX + (fN * f);
-			}
-
-		}else if((x < holeXMin || x > holeXMax) && y + r > dimY){
-			double oldY = y;
-			y = dimY - r;
-			vy = -(vy * f);
-			vx = 0.98 * vx;
-
-			if(fNetX > 0){
-				fNetX = fNetX - (fN * f);
-			}else if(fNetX < 0){
-				fNetX = fNetX + (fN * f);
-			}
-
-			if(Math.abs(vx) < 0.1) {
-				fNetX = 0;
-			}
-			if (Math.abs(y - oldY) < 0.1) {
-				fNetY = 0;
-			}
-		}else if((x >= holeXMin && x <= holeXMax) && y + r > holeY){
-			double oldY = y;
-			y = 450 - r;
-			vy = -(vy * f);
-			vx = 0.98 * vx;
-
-			if(fNetX > 0){
-				fNetX = fNetX - (fN * f);
-			}else if(fNetX < 0){
-				fNetX = fNetX + (fN * f);
-			}
-
-			if(Math.abs(fNetX) < 0.1) {
-				fNetX = 0;
-			}
-			if (Math.abs(y - oldY) < 0.1) {
-				fNetY = 0;
-			}
+		//Y-LED
+		if(y - r < 0)                                                               //Studs i taket
+			bounceY(r);
+		else if((x < holeXMin || x > holeXMax) && y + r > dimY){                    //Studs i marken
+      double yOld = y;
+			bounceY(dimY - r);
+      stop(yOld);
+		}else if((x >= holeXMin && x <= holeXMax) && y + r > holeY){                //Studs i hålets botten
+      double yOld = y;
+      bounceY(holeY - r);
+      stop(yOld);
 		}
 	}
 
-	public double airResistance(double v){
-		return 0.5*drag*a*dAir*v*v;
-	}
+  /*
+  Utför en studs i x-led
+  */
+  private void bounceX(double x){
+    this.x = x;
+    vxOld *= (-1)*muX;
+  }
 
+  /*
+  Utför en studs i y-led
+  */
+  private void bounceY(double y){
+    this.y = y;
+    vxOld *= muX;
+    vyOld *= (-1)*muY;
+  }
+
+  /*
+  Kollar om bollen ska stanna i något led, och stannar bollen i sådant fall
+  */
+  private void stop(double yOld){
+    if(Math.abs(vxOld) < 0.1)
+      vxOld = 0;
+    if(Math.abs(y - yOld) < 0.25)
+      vyOld = 0;
+  }
+
+  /*
+  Ritar bollen på fönstret
+  */
 	public void render(Graphics2D g) {
 		g.setColor(color);
-		g.fillOval((int) Math.round(x - r*500), (int) Math.round(y - r*500), (int) Math.round(2 * r*500), (int) Math.round(2 * r*500));
+		g.fillOval((int) Math.round(x - r), (int) Math.round(y - r), (int) Math.round(2 * r), (int) Math.round(2 * r));
 	}
 }
