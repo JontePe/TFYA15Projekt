@@ -1,5 +1,7 @@
 import java.awt.Graphics2D;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Particle {
 
@@ -12,24 +14,25 @@ public class Particle {
 
   //Fönster-variabler
   private Color color;
+  protected List<Integer> trailX; //list koordinater som varit
+	protected List<Integer> trailY;
 
   //Fysik-konstanter
   private final double muX = 0.9;        //Friktionskoefficient                                Saknar dimension (x-led)
   private final double muY = 0.6;        //Friktionskoefficient                                Saknar dimension (y-led)
   private final double drag = 0.47;      //Luftens dragskoefficient                            Saknar dimension
-	private final double g = 9.82;         //Tyngdacceleration                                   m/s^2 (y-led)
-  private final double dt = 0.1; 				 //Tidsintervall                                       s
+	protected final double g = 9.82;         //Tyngdacceleration                                   m/s^2 (y-led)
+  protected final double dt = 0.05; 				 //Tidsintervall                                       s
   private final double vG = g*dt;        //Gravitationens hastighetsvektor                     m/s (y-led)
   private final double rhoAir = 1.2041;  //Luftens densitet                                    kg/m^3
+  public double vBall;
 
   //Fysik-variabler
 	private double r;								       //Radie                                               m
-	private double m;								       //Massa                                               kg
+	protected double m;								       //Massa                                               kg
 	private double A;								       //Tvärsnittsarea                                      m^2
-	private double fHitX = 200;            //Slagets kraft                                       N (x-led)
-	private double fHitY = -300;           //Slagets kraft                                       N (Y-led)
-  private double vxOld;                  //Nettohastighetsvektorn i det förra tidsintervallet  m/s (x-led)
-  private double vyOld;                  //Nettohastighetsvektorn i det förra tidsintervallet  m/s (y-led)
+  private double vxOld = 0;              //Nettohastighetsvektorn i det förra tidsintervallet  m/s (x-led)
+  private double vyOld = 0;              //Nettohastighetsvektorn i det förra tidsintervallet  m/s (y-led)
 	private double x;                      //Position                                            m (x-led)
   private double y;                      //Position                                            m (y-led)
 
@@ -81,8 +84,10 @@ public class Particle {
 		this.y = y;
 		this.r = r;
 		this.m = m;
-    vxOld = fHitX/m*dt;
-    vyOld = fHitY/m*dt;
+
+    this.trailX = new ArrayList<Integer>();
+		this.trailY = new ArrayList<Integer>();
+
 		this.color = color;
 		A = r*r*Math.PI;
     this.r = r*400;
@@ -94,12 +99,10 @@ public class Particle {
 	public void update(){
     //X-LED
     double dvx = airResistance(vxOld);
-    System.out.println("dvx = " + dvx);
     double vxNew = vxOld + dvx;
 
     //Y-LED
     double dvy = vG + airResistance(vyOld);
-    System.out.println("dvy = " + dvy);
     double vyNew = vyOld + dvy;
 
     //UPPDATERING
@@ -108,6 +111,10 @@ public class Particle {
     vyOld = vyNew;
     vxOld = vxNew;
     bounceCheck();
+
+    //TRAIL
+    trailX.add((int)getY());
+    trailY.add((int)getX());
 	}
 
   /*
@@ -171,7 +178,7 @@ public class Particle {
   private void stop(double yOld){
     if(Math.abs(vxOld) < 0.1)
       vxOld = 0;
-    if(Math.abs(y - yOld) < 0.25)
+    if(Math.abs(y - yOld) < 0.1)
       vyOld = 0;
   }
 
@@ -181,5 +188,17 @@ public class Particle {
 	public void render(Graphics2D g) {
 		g.setColor(color);
 		g.fillOval((int) Math.round(x - r), (int) Math.round(y - r), (int) Math.round(2 * r), (int) Math.round(2 * r));
+    for(int i = 0; i < trailX.size(); i++){                                     //Printar alla punkter varje gång
+		    g.fillOval(trailX.get(i), trailY.get(i), 3, 3);
+		}
+
 	}
+
+  /*
+  Beräknar bollens hastighet efter slaget
+  */
+	public double velBall(double mClub, double vEnd){
+		return (2.0*mClub*vEnd)/(m+mClub);
+	}
+
 }
