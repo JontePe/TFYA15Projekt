@@ -12,59 +12,59 @@ import javax.swing.JFrame;
 import javax.swing.JButton;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.Font;
 
 public class PhysicsCanvas extends Canvas implements Runnable {
 
-	public static final int dimX = 800;
-	public static final int dimY = 600;
+	public static final int dimX = 1800;
+	public static final int dimY = 1000;
 
 	private boolean running;
-	private Particle boll;
-	private Particle klubba;
-	private boolean hit = false;
+
+	private static Particle boll;
+	private static Particle klubba;
+	final private static int klubbPosX = 200;
+	final private static int klubbPosY = 800;
+	private static double L = 100; // aka height
 
 	static JButton chargeUp;
 	static JButton chargeDown;
 	static JButton shoot;
+	static JButton restart;
 	Color myGreen = new Color(25, 105, 45);
 	static int chargeLvl = 1;
 	static boolean start = false;
-	
+
+	protected static int i = 0;
+	public double vBall;
+
+	Font font = new Font("Comic Sans", Font.BOLD, 20);
+
 	public PhysicsCanvas() {
 		Dimension d = new Dimension(dimX, dimY);
 		setPreferredSize(d);
 		setMinimumSize(d);
 		setMaximumSize(d);
 
-		boll = new Particle(400, 400, 0.021335, 0.046, Color.RED); // 0.04593
-		klubba = new Particle(300, 300, 0.03, 0.4, Color.BLUE) {
-			private double L = 100; // aka height
+		boll = new Particle((klubbPosX + L), (klubbPosY + L), 0.021335, 0.04593, Color.RED);
+		klubba = new Particle(klubbPosX, klubbPosY, 0.03, 0.4, Color.BLACK) {
 			private double th = Math.PI / 2;
-			private double vth = 2; // aka StartVel
+			private double vth = 0; // aka StartVel
 
 			@Override
 			public void update() {
-				trailX.add((int) getY());
-				trailY.add((int) getX());
+				trailX.add((int) getX());
+				trailY.add((int) getY());
 
-				if (!(300-5 < getY() && getX() > 500-5)) {
-					vth = vth + g * Math.sin(th) * dt;
+				if (!(getX() > klubbPosX + 2 * L - L / 50)) {
+					vth = vth + (g) * Math.sin(th) * dt;
 					th = th + vth * dt;
-					setX(300 + L - L * Math.sin(th));
-					setY(300 - L * Math.cos(th));
+					setX(klubbPosX + L - L * Math.sin(th));
+					setY(klubbPosY - L * Math.cos(th));
 				}
-
 				// calc fart
-				vBall = boll.velBall(m, endVel(vth, L));
-			}
 
-			/*
-			 * Beräknar klubbans hastighet vid slaget
-			 */
-			public double endVel(double startVel, double h) {
-				double allEnergy = Math.pow(startVel, 2) / 2 + g * h;
-				double v = Math.sqrt(allEnergy * 2)*(0.25*chargeLvl);
-				return v;
+				vBall = (0.45 * chargeLvl) * klubba.velBall(0.4, klubba.endVel(vth, L));
 			}
 		};
 
@@ -101,9 +101,17 @@ public class PhysicsCanvas extends Canvas implements Runnable {
 		g.setColor(Color.CYAN);
 		g.fillRect(0, 0, getWidth(), getHeight());
 		g.setColor(myGreen);
-		g.fillRect(0, getHeight()-100, getWidth(), getHeight());
+		g.fillRect(0, getHeight() - 100, getWidth(), getHeight());
 		g.setColor(Color.BLACK);
-		g.fillRect(getWidth()-200, getHeight()-100, 50, 50);
+		g.fillRect(getWidth() - 200, getHeight() - 100, 50, 50);
+		g.setFont(font);
+		g.drawString("Charge: " + chargeLvl, (dimX / 4 - 50), 50);
+		g.setColor(Color.DARK_GRAY);
+		g.fillRect(getWidth() - 160, getHeight() - 200, 10, 150);
+		g.setColor(Color.MAGENTA);
+		g.fillRect(getWidth() - 160, getHeight() - 200, 50, 30);
+		g.setColor(Color.YELLOW);
+		g.fillOval(dimX - 200, 20, 200, 200);
 
 		boll.render(g);
 		klubba.render(g);
@@ -112,21 +120,19 @@ public class PhysicsCanvas extends Canvas implements Runnable {
 	}
 
 	private void update() {
-		if (395 < klubba.getY() && klubba.getY() < 405 && !hit) {
-			hit = true;
-			bollHit(40, klubba.vBall);
-		}
-		if(start) {
-			if (hit)
+
+		if (start) {
+			if (boll.getX() <= klubba.getX() && i == 0) { // bolllkoordinat i yled +/- 5
+				i++;
+				boll.velUpdate(15, vBall);
+			}
+
+			if (i != 0) {
+
 				boll.update();
+			}
 			klubba.update();
 		}
-	}
-
-	private void bollHit(double loft, double v) {
-		double loftInRad = loft * 0.01753;
-		boll.setVXOld(v * Math.cos(loftInRad));
-		boll.setVYOld((-1) * v * Math.sin(loftInRad));
 	}
 
 	public static void buttonFunction() {
@@ -169,6 +175,7 @@ public class PhysicsCanvas extends Canvas implements Runnable {
 			}
 
 		});
+
 	}
 
 	public static void main(String[] args) {
@@ -190,4 +197,5 @@ public class PhysicsCanvas extends Canvas implements Runnable {
 		physics.start();
 		myFrame.setLocationRelativeTo(null);
 	}
+
 }
